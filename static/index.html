@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>VeriDoc V0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="header">
+        <h1>VeriDoc V0</h1>
+        <div class="status-line" id="globalStatus">Ready</div>
+      </header>
+
+      <section class="upload-panel">
+        <input id="fileInput" type="file" />
+        <button id="uploadBtn">Upload document</button>
+      </section>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Document</h2>
+          <div id="documentBox" class="box">No document uploaded.</div>
+        </div>
+
+        <div class="card">
+          <h2>Extracted fields</h2>
+          <pre id="extractionBox" class="box">No extraction yet.</pre>
+        </div>
+
+        <div class="card">
+          <h2>Suggested match</h2>
+          <pre id="suggestionBox" class="box">No suggestion yet.</pre>
+        </div>
+
+        <div class="card">
+          <h2>Candidate transactions</h2>
+          <pre id="candidatesBox" class="box">No candidates yet.</pre>
+        </div>
+      </section>
+
+      <section class="decision-panel card">
+        <h2>Decision</h2>
+        <div class="button-row">
+          <button id="approveBtn" disabled>Approve match</button>
+          <button id="rejectBtn" disabled>Reject match</button>
+        </div>
+        <textarea id="decisionNote" rows="3" placeholder="Optional note"></textarea>
+      </section>
+
+      <section class="card">
+        <h2>Audit trail</h2>
+        <button id="loadAuditBtn" disabled>Load audit trail</button>
+        <pre id="auditBox" class="box">No audit data yet.</pre>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
