@@ -89,6 +89,39 @@ def serialise_transaction(tx: Transaction) -> dict[str, Any]:
     }
 
 
+def serialise_extraction(extraction: Optional[ExtractedDocumentFields]) -> Optional[dict[str, Any]]:
+    if extraction is None:
+        return None
+
+    return {
+        "supplier_name": extraction.supplier_name,
+        "invoice_number": extraction.invoice_number,
+        "document_type": extraction.document_type,
+        "issue_date": extraction.issue_date,
+        "due_date": extraction.due_date,
+        "total_amount": extraction.total_amount,
+        "vat_amount": extraction.vat_amount,
+        "currency": extraction.currency,
+        "payment_reference": extraction.payment_reference,
+        "possible_job_reference": extraction.possible_job_reference,
+        "confidence_notes": extraction.confidence_notes,
+        "extraction_confidence": extraction.extraction_confidence,
+    }
+
+
+def serialise_decision(decision: Optional[MatchDecision]) -> Optional[dict[str, Any]]:
+    if decision is None:
+        return None
+
+    return {
+        "decision": decision.decision,
+        "transaction_id": decision.transaction_id,
+        "decided_by_user_id": decision.decided_by_user_id,
+        "decided_at": decision.decided_at.isoformat(),
+        "decision_note": decision.decision_note,
+    }
+
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
@@ -117,6 +150,36 @@ def health():
 def list_transactions(db: Session = Depends(get_db)):
     transactions = db.query(Transaction).order_by(Transaction.transaction_date.desc()).all()
     return [serialise_transaction(tx) for tx in transactions]
+
+
+@app.get("/api/documents")
+def list_documents(db: Session = Depends(get_db)):
+    documents = db.query(Document).order_by(Document.uploaded_at.desc()).limit(50).all()
+    rows = []
+
+    for document in documents:
+        extraction = db.query(ExtractedDocumentFields).filter(
+            ExtractedDocumentFields.document_id == document.id
+        ).first()
+
+        suggestion = db.query(MatchSuggestion).filter(
+            MatchSuggestion.document_id == document.id
+        ).order_by(MatchSuggestion.suggested_at.desc()).first()
+
+        decision = db.query(MatchDecision).filter(
+            MatchDecision.document_id == document.id
+        ).order_by(MatchDecision.decided_at.desc()).first()
+
+        rows.append(
+            {
+                "document": serialise_document(document),
+                "extraction": serialise_extraction(extraction),
+                "suggestion": None if suggestion is None else suggestion.raw_suggestion_json,
+                "decision": serialise_decision(decision),
+            }
+        )
+
+    return rows
 
 
 @app.post("/api/documents/upload")
@@ -205,7 +268,7 @@ async def upload_document(
         document_id=document.id,
         transaction_id=int(suggestion_data["suggested_transaction_id"]) if suggestion_data["suggested_transaction_id"] else None,
         rank=1,
-        suggestion_score=float(candidate_payload[0]["amount"]) if candidate_payload and suggestion_data["suggested_transaction_id"] else 0.0,
+        suggestion_score=float(suggestion_data.get("suggested_score") or 0.0),
         suggestion_confidence=suggestion_data["confidence"],
         primary_reason=suggestion_data["primary_reason"],
         uncertainty_notes=suggestion_data["uncertainty_notes"],
@@ -261,28 +324,9 @@ def get_document(document_id: int, db: Session = Depends(get_db)):
 
     return {
         "document": serialise_document(document),
-        "extraction": None if extraction is None else {
-            "supplier_name": extraction.supplier_name,
-            "invoice_number": extraction.invoice_number,
-            "document_type": extraction.document_type,
-            "issue_date": extraction.issue_date,
-            "due_date": extraction.due_date,
-            "total_amount": extraction.total_amount,
-            "vat_amount": extraction.vat_amount,
-            "currency": extraction.currency,
-            "payment_reference": extraction.payment_reference,
-            "possible_job_reference": extraction.possible_job_reference,
-            "confidence_notes": extraction.confidence_notes,
-            "extraction_confidence": extraction.extraction_confidence,
-        },
+        "extraction": serialise_extraction(extraction),
         "suggestion": None if suggestion is None else suggestion.raw_suggestion_json,
-        "decision": None if decision is None else {
-            "decision": decision.decision,
-            "transaction_id": decision.transaction_id,
-            "decided_by_user_id": decision.decided_by_user_id,
-            "decided_at": decision.decided_at.isoformat(),
-            "decision_note": decision.decision_note,
-        },
+        "decision": serialise_decision(decision),
     }
 
 

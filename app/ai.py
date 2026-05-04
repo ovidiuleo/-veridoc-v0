@@ -305,6 +305,7 @@ def suggest_match(extracted_fields: dict[str, Any], candidates: list[dict[str, A
 
     return {
         "suggested_transaction_id": top["transaction_id"],
+        "suggested_score": top["score"],
         "confidence": confidence,
         "ranked_candidates": ranked_candidates,
         "primary_reason": top["reason"],
